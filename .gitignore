@@ -1,0 +1,20 @@
+# ローカルの作業用リンク(リポジトリには含めない)
+scratch
+extracted
+
+# Python
+__pycache__/
+*.pyc
+
+# C ビルド成果物
+c/build/
+
+# (語尾 / なしはシンボリックリンクにも一致する)
+probe
+analysis
+resources
+tools
+docs/
+
+# エディタ
+.vscode/
