@@ -1,4 +1,4 @@
-/* osc001(PCB Scope / DPScope SE 系譜)C API — libosc001
+/* osc001(PCB Scope)C API — libosc001
  *
  * プロトコル事実は python/osc001.py(実機検証済みの参照実装)と同一。
  * C99・外部依存なし。コアはトランスポート非依存(コールバック注入)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""osc001(DPScope SE)の Python API プロトタイプ(2026-10-11)。
+"""osc001 の Python API プロトタイプ(2026-10-11)。
 
 このモジュールが実装するプロトコル(実機で確定済み):
   * USB HID 04d8:f891、IN/OUT 64 バイト、レポート ID なし。
