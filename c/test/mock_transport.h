@@ -48,6 +48,7 @@ static int mock_send(void *u, const uint8_t *report)
     switch (report[0]) {
     case 2:
         memcpy(m->resp + 1, "DPScope SE", 10);
+        memcpy(m->resp + 11, "@x", 2);   /* byte11 以降は前の応答の残骸(実機でも 0 とは限らない) */
         break;
     case 3:
         m->resp[1] = 0x05; m->resp[2] = 0x01;   /* V1.05 相当(値は固定のダミー) */

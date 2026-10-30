@@ -37,6 +37,7 @@ extern "C" {
 #define OSC001_OP_ECHO         0x08 /* op8 が無効索引で返す byte0 */
 #define OSC001_FOOTER_OFFSET   38   /* chunk6 応答のフッター語列開始バイト */
 #define OSC001_FOOTER_WORDS    13   /* 13 語 LE16 = 26 B */
+#define OSC001_INFO_LEN        10   /* op2 が書く製品文字列は byte1..10。byte11 以降は前の応答の残骸 */
 #define OSC001_LA_CHUNKS       7
 #define OSC001_LA_BUFFER_BYTES 448  /* LA: op8 chunk0..6 = 448 B(末尾 26 B はフッター) */
 #define OSC001_LA_VALID_BYTES  422  /* 有効データ長(スコープの実バッファ長と同じ) */

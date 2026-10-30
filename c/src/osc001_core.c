@@ -201,7 +201,7 @@ int osc001_info(osc001_handle *h, char *out, size_t outlen)
         return rc;
     }
     size_t k = 0;
-    for (int i = 1; i < OSC001_REPORT_LEN && r[i] != 0; i++) {
+    for (int i = 1; i <= OSC001_INFO_LEN && r[i] != 0; i++) {
         if (r[i] >= 32 && r[i] < 127 && k + 1 < outlen)
             out[k++] = (char)r[i];
     }

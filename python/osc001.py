@@ -65,6 +65,7 @@ DEFAULT_DEVICE = "/dev/hidraw2"
 #   w11 はセッション内で動きうる(LA 関連候補)。静的語の差分で電源サイクルを検出する。
 FOOTER_OFFSET = 38            # 応答内の語列開始バイト
 FOOTER_WORDS = 13
+INFO_LEN = 10                 # op2 が書く製品文字列は byte1..10
 FOOTER_PARITY_IDX = (5, 7)    # w05/w07(A⇔B 対。和 32972 一定)
 FOOTER_FP_IDX = (0, 1, 2, 3, 4, 6, 8, 9, 10, 12)   # 電源サイクル指紋に使う語
 #   (w05/w07=パリティ、w11=セッション内可変のため除外)
@@ -449,7 +450,7 @@ class Scope(object):
         r = self._txn(2)
         if r is None:
             raise Osc001Error("op2 無応答")
-        txt = bytes(r[1:]).split(b"\x00")[0]
+        txt = bytes(r[1:1 + INFO_LEN]).split(b"\x00")[0]   # byte11 以降は前の応答の残骸
         txt = "".join(chr(c) if 32 <= c < 127 else "" for c in txt)
         return {"path": self.path, "info": txt, "raw": bytes(r)}
 
