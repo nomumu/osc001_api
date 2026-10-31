@@ -161,8 +161,10 @@ typedef enum {
 
 /* ── ハードトリガ(op5 byte12/13/15/19)────────────────────────────────
  * 源は CH1 と EXT(T 入力)だけ。CH2 を源にする設定は無い(比較器は CH1 端子側に固定)。
- * トリガ点 = サンプル 0(プリトリガなし)。CH1 のレベルは arm のたびに現在のタップ・段・Position
- * から byte15 に換算し、経路 byte19 も CH1 のタップ(÷8 → 1、×1 → 2)に合わせる。
+ * トリガ点 = サンプル 0(プリトリガなし)。比較器はゲイン段・Position の前(op9 の m と同じ所)を見るので、
+ * CH1 のレベルは byte15 = m/2 − 128(m = m0 + level_v / VCOUNT)。段・Position に依らず、タップと m0 だけで決まる
+ * (段 1・Position 0x80 のサンプル値 + 0x7F と同じ)。arm のたびに換算し、経路 byte19 も CH1 のタップ
+ * (÷8 → 1、×1 → 2)に合わせる。
  * EXT のしきい値は固定(実測 立上り ≒1.45 V・立下り ≒1.42 V)で、byte15 は OSC001_TRIG_LEVEL_EXT に置く。
  * T 入力は浮かせると電圧が定まらず誤トリガし得る。 */
 typedef enum {
@@ -188,7 +190,7 @@ typedef struct {
 /* 既定値(NONE、立上り、0 V、level_raw=-1、NORMAL、auto 既定)で埋める */
 void osc001_trigger_init(osc001_trigger_t *cfg);
 /* 設定を検証して保持する。cfg=NULL または source=NONE でフリーラン。
- * レベルが CH1 の表示域外なら ERR_ARG(設定は変えない) */
+ * レベルが比較器の範囲外(byte15 が 0x01..0xFE に収まらない)なら ERR_ARG(設定は変えない) */
 int osc001_set_trigger(osc001_handle *h, const osc001_trigger_t *cfg);
 int osc001_get_trigger(const osc001_handle *h, osc001_trigger_t *out);
 /* 現在の設定で byte15 に入る値。フリーランか換算不能なら <0 */

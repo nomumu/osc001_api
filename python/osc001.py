@@ -184,7 +184,7 @@ BYTE3_MODE_OK = (1, 2)          # 01 / 10 のとき正常な 2ch 取得になる
 
 # ── スコープのハードトリガ(op5)──────
 #   byte12 = 1 でトリガ待ち(未成立なら op6 が 0 のまま、op8 は前回の凍結バッファ)、
-#   byte13 = 極性、byte15 = レベル(トリガ経路の生バイト = サンプル + 0x7F と比較)、
+#   byte13 = 極性、byte15 = レベル(比較器はゲイン段・Position の前を見る。byte15 = m/2 − 128 と比較)、
 #   byte19 = 経路(下位 2 ビット)。CH1 の経路は CH1 のタップと揃える。
 #   CH2 を源にする設定は byte1/byte19 のどの組み合わせにも無い(比較器は CH1 端子側に固定)。
 TRIG_SOURCES = ("ch1", "ext")
@@ -694,13 +694,14 @@ class Scope(object):
 
         source: "ch1" か "ext"(T 入力)。CH2 のハードトリガは無い(呼び出し側でソフト処理する)。
         edge:   "rising" / "falling"(EXT でも有効)。
-        level_v: CH1 のレベル(入力端子の電圧)。arm のたびに現在のタップ・段・Position から
-                 byte15 に換算する(段 3..5 は 0 V 切片が未測定なので換算できない)。
+        level_v: CH1 のレベル(入力端子の電圧)。比較器はゲイン段・Position の前(op9 の m と
+                 同じ所)を見るので、byte15 = m/2 − 128(m = m0 + level_v / VCOUNT)。
+                 段・Position に依らず、タップと m0 だけで決まる。arm のたびに換算する。
         level_raw: byte15 を直接指定(level_v より優先)。EXT では無視して TRIG_LEVEL_EXT を使う。
         mode:   "normal" = 成立まで待ち、capture の timeout で TriggerTimeout。
                 "auto"   = auto_timeout(既定 TRIG_AUTO_MIN_S + 384/fs 秒)待って未成立なら
                            フリーランで取り直す(Trace.triggered = False)。
-        設定はこの場で検証する(レベルが表示域外なら ValueError)。
+        設定はこの場で検証する(レベルが比較器の範囲外なら ValueError)。
         """
         if source is None:
             self._trig = None
@@ -739,7 +740,7 @@ class Scope(object):
         return self._trigger_bytes()[2]
 
     def _trigger_bytes(self):
-        """_trig → (byte12, byte13, byte15, byte19)。レベルが表示域外なら ValueError。"""
+        """_trig → (byte12, byte13, byte15, byte19)。レベルが比較器の範囲外なら ValueError。"""
         t = self._trig
         b13 = TRIG_EDGE[t["edge"]]
         if t["source"] == "ext":
@@ -747,10 +748,11 @@ class Scope(object):
         b19 = TRIG_PATH[self._tap(1)]
         if t["level_raw"] is not None:
             return 1, b13, t["level_raw"], b19
-        raw = int(round(self.volts_to_code(1, t["level_v"]))) + 0x7F
+        tap = self._tap(1)
+        raw = int(round((self.m0[1][tap] + t["level_v"] / VCOUNT[tap]) / 2.0)) - 128
         if not TRIG_LEVEL_MIN <= raw <= TRIG_LEVEL_MAX:
-            raise ValueError("トリガレベル %.3g V は CH1 の表示域外(生バイト %d)。"
-                             "レンジか Position を見直す" % (t["level_v"], raw))
+            raise ValueError("トリガレベル %.3g V は比較器の範囲外(生バイト %d)"
+                             % (t["level_v"], raw))
         return 1, b13, raw, b19
 
     def _apply_trigger(self):
@@ -765,7 +767,7 @@ class Scope(object):
     def arm(self):
         """op5(SET_REG)= 設定適用兼 arm。この時点でデバイスが取得を始める。
 
-        set_trigger() の設定があれば、現在のタップ・段・Position で byte12/13/15/19 を作り直す。
+        set_trigger() の設定があれば、現在のタップで byte12/13/15/19 を作り直す。
         未発火の LA エッジ arm が残っていれば、先に解除する(LA_CLEAR_EDGE の注記)。
         """
         self._apply_trigger()

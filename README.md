@@ -67,7 +67,9 @@ with osc001.Scope() as sc:     # /dev/hidraw を自動探索。明示も可: Sco
 - ハードトリガ: `set_trigger("ch1", "rising", level_v=2.5, mode="auto")` / `set_trigger("ext", "falling")` /
   `set_trigger(None)`(フリーラン)。源は CH1 と EXT(T 入力)だけで、CH2 のハードトリガは無い。
   トリガ点 = サンプル 0。Normal で未成立なら `TriggerTimeout`、Auto は未成立ならフリーランで取り直す
-  (`t.triggered` = True / False / None)。レベルの電圧換算は `zero_code(ch)` / `volts_to_code(ch, v)`
+  (`t.triggered` = True / False / None)。比較器はゲイン段・Position の前を見るので、レベルは
+  byte15 = m/2 − 128(m = m0 + level_v / VCOUNT)に換算する(`trigger_level_raw()`)。V/div・Position を変えても同じ電圧で成立する。
+  ×1 のタップでは約 +1.9 V までしか置けない
 - LA(ロジックアナライザ)モード: `la_set_rate(hz)` → `la_capture(channels=(2,), edge="falling")` → 844 サンプル
   (fs は 979.4k/490.9k/200k の固定段と ≦108.7 kHz の可変域、サンプル 0 = 発火点)。待機の中止は `la_abort()`(未発火のエッジ arm を残すとスコープ復帰後に USB 切断するため、
   `arm()` も自動で解除する)

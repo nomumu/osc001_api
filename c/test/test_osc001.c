@@ -284,6 +284,20 @@ int main(void)
                   "CH1 ÷8 トリガ: byte12/13/15/19 = %d/%d/0x%02x/%d", osc001_get_raw(ht, 12),
                   osc001_get_raw(ht, 13), osc001_get_raw(ht, 15), osc001_get_raw(ht, 19));
             CHECK(osc001_trigger_level_raw(ht) == osc001_get_raw(ht, 15), "trigger_level_raw");
+            {
+                /* 比較器は段・Position の前を見るので、byte15 は段・Position に依らない(段 4 でも換算できる) */
+                int b15 = osc001_get_raw(ht, 15);
+                osc001_set_gain(ht, 1, 0, 8, 205);
+                CHECK(osc001_arm(ht) == OSC001_OK && m.last_op5[15] == b15,
+                      "段 0・Position 205 でも byte15 = %d(期待 %d)", m.last_op5[15], b15);
+                osc001_set_gain(ht, 1, 4, 8, 40);
+                CHECK(osc001_arm(ht) == OSC001_OK && m.last_op5[15] == b15,
+                      "段 4・Position 40 でも byte15 = %d(期待 %d)", m.last_op5[15], b15);
+                CHECK(b15 == (int)lround((495.0 + 2.5 / OSC001_VCOUNT_DIV8) / 2) - 128,
+                      "byte15 = (m0 + V/VCOUNT)/2 − 128");
+            }
+            tc.level_v = 1.0;                  /* ×1 の比較器は ≒1.9 V までなので、2.5 V は範囲外 */
+            osc001_set_trigger(ht, &tc);
             osc001_set_range(ht, 1, 0.2, 0, OSC001_POS_AUTO);
             CHECK(osc001_arm(ht) == OSC001_OK && m.last_op5[19] == 2,
                   "CH1 ×1 タップにすると arm で経路 byte19=2");
@@ -293,9 +307,9 @@ int main(void)
                 osc001_trigger_t bad = tc;
                 bad.level_v = 20.0;
                 CHECK(osc001_set_trigger(ht, &bad) == OSC001_ERR_ARG &&
-                      osc001_get_trigger(ht, &got) == OSC001_OK && got.level_v == 2.5 &&
+                      osc001_get_trigger(ht, &got) == OSC001_OK && got.level_v == 1.0 &&
                       osc001_get_raw(ht, 15) == b15,
-                      "表示域外レベルは ERR_ARG で設定を変えない");
+                      "比較器の範囲外のレベルは ERR_ARG で設定を変えない");
                 bad = tc; bad.edge = OSC001_EDGE_AUTO;
                 CHECK(osc001_set_trigger(ht, &bad) == OSC001_ERR_ARG, "edge=AUTO は ERR_ARG");
                 bad = tc; bad.level_raw = 0xFF;

@@ -29,7 +29,7 @@ static const uint8_t DEFAULT_BYTES[20] = {
     0x00,  /* byte12 ハードトリガ 0=フリーラン / 1=トリガ待ち */
     0x00,  /* byte13 トリガ極性 0=立下り / 1=立上り */
     0x00,  /* byte14 */
-    0x4D,  /* byte15 トリガレベル(トリガ経路の生バイト値と比較) */
+    0x4D,  /* byte15 トリガレベル(段・Position の前の値 m/2 − 128 と比較) */
     0x00, 0x0A, 0x05,            /* byte16..18 ET モード/2MHz 分周比/その半分 */
     0x01   /* byte19 トリガ経路(下位 2 ビット): 1=CH1 ÷8 / 2=CH1 ×1 / 3=EXT */
 };
@@ -477,14 +477,12 @@ static int trigger_bytes(const osc001_handle *h, const osc001_trigger_t *t,
     }
     int raw = t->level_raw;
     if (raw < 0) {
-        double code;
-        if (osc001_volts_to_code(h, 1, t->level_v, &code) != OSC001_OK) {
-            snprintf(why, whylen, "CH1 段 %d の 0 V 切片は未測定", h->b[8]);
-            return OSC001_ERR_ARG;
-        }
-        raw = (int)lround(code) + 0x7F;
+        /* 比較器は段・Position の前を見る: byte15 = m/2 − 128(段 1・Position 0x80 のサンプル値 + 0x7F) */
+        double m = h->m0[ch_index(1)][(tap == 8) ? 1 : 0] +
+                   t->level_v / ((tap == 8) ? OSC001_VCOUNT_DIV8 : OSC001_VCOUNT_X1);
+        raw = (int)lround(m / 2.0) - 128;
         if (raw < OSC001_TRIG_LEVEL_MIN || raw > OSC001_TRIG_LEVEL_MAX) {
-            snprintf(why, whylen, "トリガレベル %.3g V は CH1 の表示域外(生バイト %d)",
+            snprintf(why, whylen, "トリガレベル %.3g V は比較器の範囲外(生バイト %d)",
                      t->level_v, raw);
             return OSC001_ERR_ARG;
         }

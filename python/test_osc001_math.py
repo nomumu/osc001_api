@@ -457,6 +457,14 @@ if (sc_t.b[12], sc_t.b[13], sc_t.b[15], sc_t.b[19]) != (1, 1, want15, 1):
     fails.append("CH1 ÷8 トリガのバイト(%s)" % [sc_t.b[i] for i in (12, 13, 15, 19)])
 if sc_t.trigger_level_raw() != want15:
     fails.append("trigger_level_raw")
+for g, pos in ((0, 205), (4, 40)):          # 比較器は段・Position の前を見るので byte15 は変わらない
+    sc_t.set_gain(1, g, tap=8, position=pos)
+    sc_t._apply_trigger()
+    if sc_t.b[15] != want15:
+        fails.append("段 %d・Position %d で byte15 = %d(期待 %d)" % (g, pos, sc_t.b[15], want15))
+if want15 != int(round((495.0 + 2.5 / 47.9e-3) / 2)) - 128:
+    fails.append("byte15 = (m0 + V/VCOUNT)/2 − 128")
+sc_t.set_trigger("ch1", "rising", level_v=1.0)   # ×1 の比較器は ≒1.9 V までなので、2.5 V は範囲外
 sc_t.set_range(1, 0.2)                     # ×1 にすると次の arm で経路 2 へ
 sc_t._apply_trigger()
 if sc_t.b[19] != 2:
@@ -466,7 +474,7 @@ keep = (sc_t.trigger(), [sc_t.b[i] for i in (12, 13, 15, 19)])
 for bad in ((lambda: sc_t.set_trigger("ch2")),
             (lambda: sc_t.set_trigger("ch1", edge="both")),
             (lambda: sc_t.set_trigger("ch1", mode="single")),
-            (lambda: sc_t.set_trigger("ch1", level_v=20.0)),       # 1 V/div の表示域外
+            (lambda: sc_t.set_trigger("ch1", level_v=20.0)),       # 比較器の範囲外
             (lambda: sc_t.set_trigger("ch1", level_raw=0x00)),
             (lambda: sc_t.set_trigger("ch1", level_raw=0xFF))):
     try:
